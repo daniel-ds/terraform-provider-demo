@@ -14,7 +14,9 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("DEMO_URL", "http://localhost:9200"),
 			},
 		},
-		ResourcesMap:  map[string]*schema.Resource{},
+		ResourcesMap: map[string]*schema.Resource{
+			"demo_person": resourcePerson(),
+		},
 		ConfigureFunc: configureFunction(),
 	}
 }
