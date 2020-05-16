@@ -88,5 +88,16 @@ func resourcePersonUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourcePersonDelete(d *schema.ResourceData, meta interface{}) error {
+	name := d.Id()
+	client := meta.(*elasticsearch.Client)
+
+	response, e := client.Delete(index, name)
+	if e != nil {
+		return e
+	}
+	defer response.Body.Close()
+	if response.IsError() && response.StatusCode != http.StatusNotFound {
+		return fmt.Errorf("error deleting person with name: %s, StatusCode: %v", name, response.StatusCode)
+	}
 	return nil
 }
