@@ -5,6 +5,9 @@ import (
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esutil"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/tidwall/gjson"
+	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -65,6 +68,29 @@ func resourcePersonCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourcePersonRead(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*elasticsearch.Client)
+	response, e := client.Get(index, d.Id())
+	if e != nil {
+		return e
+	}
+	defer response.Body.Close()
+	if response.IsError() && response.StatusCode != http.StatusNotFound {
+		return fmt.Errorf("error in Read response for resource with name: %s, Status code: %v", d.Id(), response.StatusCode)
+	}
+	if response.StatusCode == http.StatusNotFound {
+		log.Printf("[WARN] Removing person from state because no longer exists")
+		d.SetId("")
+		return nil
+	}
+	bytes, e := ioutil.ReadAll(response.Body)
+	if e != nil {
+		return e
+	}
+
+	manyBytes := gjson.GetManyBytes(bytes, "_source.Age", "_source.Hobby")
+	d.Set("age", manyBytes[0].Int())
+	d.Set("hobby", manyBytes[1].Str)
+
 	return nil
 }
 
