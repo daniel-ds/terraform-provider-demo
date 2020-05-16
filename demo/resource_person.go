@@ -69,6 +69,21 @@ func resourcePersonRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourcePersonUpdate(d *schema.ResourceData, meta interface{}) error {
+	name := d.Id()
+	client := meta.(*elasticsearch.Client)
+	reader := esutil.NewJSONReader(Person{
+		Age:   d.Get("age").(int),
+		Hobby: d.Get("hobby").(string),
+	})
+
+	response, e := client.Index(index, reader, client.Index.WithDocumentID(name))
+	if e != nil {
+		return e
+	}
+	defer response.Body.Close()
+	if response.IsError() {
+		return fmt.Errorf("error in Update response for resource with name: %s, Status code: %v", d.Id(), response.StatusCode)
+	}
 	return resourcePersonRead(d, meta)
 }
 
